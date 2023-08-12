@@ -25,7 +25,8 @@ addon_info = {
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description": _("""Diversas utilidades para NVDA.
 
-* Anuncio del escritorio actual."""),
+* Anuncio del escritorio actual.
+* Anuncio de carpeta vacía en explorador de windows."""),
 	# version
 	"addon_version": "1.0",
 	# Author(s)
