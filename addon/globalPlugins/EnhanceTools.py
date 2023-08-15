@@ -14,6 +14,7 @@ import globalVars
 import ui
 import appModuleHandler
 import ctypes
+import time
 from NVDAObjects.UIA import UIA
 from scriptHandler import script
 from comtypes import CoInitialize
@@ -27,6 +28,83 @@ addonHandler.initTranslation()
 CLSID_CUIAutomation = "{FF48DBA4-60EF-4201-AA87-54103EEF594E}"
 # Usar ctypes para acceder a user32.dll
 user32 = ctypes.windll.user32
+# Cargar las funciones necesarias
+SendInput = ctypes.windll.user32.SendInput
+INPUT_KEYBOARD = 1
+KEYEVENTF_KEYUP = 0x0002
+
+class KEYBDINPUT(ctypes.Structure):
+	"""
+	Estructura para eventos de teclado.
+	"""
+	_fields_ = [("wVk", ctypes.c_ushort),
+				("wScan", ctypes.c_ushort),
+				("dwFlags", ctypes.c_ulong),
+				("time", ctypes.c_ulong),
+				("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))]
+
+class INPUT(ctypes.Structure):
+	"""
+	Estructura para la entrada de eventos, incluye eventos de teclado.
+	"""
+	_fields_ = [("type", ctypes.c_ulong),
+				("ki", KEYBDINPUT),
+				("padding", ctypes.c_ubyte * 8)]
+
+def PressKey(hexKeyCode):
+	"""
+	Función para simular la pulsación de una tecla.
+	
+	Args:
+		hexKeyCode (int): El código hexadecimal de la tecla a presionar.
+	"""
+	keyEvent = INPUT(type=INPUT_KEYBOARD,
+					ki=KEYBDINPUT(wVk=hexKeyCode))
+	SendInput(1, ctypes.byref(keyEvent), ctypes.sizeof(keyEvent))
+
+def ReleaseKey(hexKeyCode):
+	"""
+	Función para simular la liberación de una tecla.
+	
+	Args:
+		hexKeyCode (int): El código hexadecimal de la tecla a liberar.
+	"""
+	keyEvent = INPUT(type=INPUT_KEYBOARD,
+					ki=KEYBDINPUT(wVk=hexKeyCode, dwFlags=KEYEVENTF_KEYUP))
+	SendInput(1, ctypes.byref(keyEvent), ctypes.sizeof(keyEvent))
+
+def goToVirtualDesktop(desktopNumber):
+	"""
+	Función para moverse a un escritorio virtual específico.
+	
+	Args:
+		desktopNumber (int): El número del escritorio virtual al que moverse.
+	"""
+	# Definiciones de teclas
+	VK_LWIN = 0x5B
+	VK_CONTROL = 0x11
+	VK_RIGHT = 0x27
+	VK_LEFT = 0x25
+
+	# Presiona WIN + CTRL
+	PressKey(VK_LWIN)
+	PressKey(VK_CONTROL)
+
+	# Mueve al escritorio 1 primero
+	for _ in range(10):  # Asumir un máximo de 10 escritorios
+		PressKey(VK_LEFT)
+		ReleaseKey(VK_LEFT)
+		time.sleep(0.1)  # Espera corta entre pulsaciones
+
+	# Mueve al escritorio deseado
+	for _ in range(desktopNumber - 1):
+		PressKey(VK_RIGHT)
+		ReleaseKey(VK_RIGHT)
+		time.sleep(0.1)  # Espera corta entre pulsaciones
+
+	# Libera WIN + CTRL
+	ReleaseKey(VK_CONTROL)
+	ReleaseKey(VK_LWIN)
 
 def obtener_nombre_escritorio():
 	"""
@@ -134,6 +212,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@script(gesture=None, description= _("Anuncia el escritorio virtual actual"), category= "EnhanceTools")
 	def script_anuncia_escritorio(self, gesture):
 		ui.message(obtener_nombre_escritorio())
+
+	@script(gestures=[f"kb:NVDA+alt+{i}" for i in range(10)], description=_("Mover al escritorio virtual especificado"), category="EnhanceTools")
+	def script_ir_escritorio(self, gesture):
+		"""
+		Script para moverse a un escritorio virtual específico.
+		
+		Args:
+			gesture: El gesto (combinación de teclas) que activó este script.
+		"""
+		desktopNumber = int(gesture.mainKeyName)
+		if desktopNumber == 0:
+			desktopNumber = 10
+		goToVirtualDesktop(desktopNumber)
 
 	def terminate(self):
 		"""Termina el plugin global y restaura la configuración."""

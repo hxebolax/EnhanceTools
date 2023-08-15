@@ -14,6 +14,16 @@ Con el complemento Windows App Essentials si cambiamos de escritorio nos anuncia
 
 Al pulsar la tecla que hayamos asignado nos dirá el nombre del escritorio actual en el que nos encontramos.
 
+* Mover al escritorio virtual especificado (función con teclas ya asignadas pero se pueden modificar por el usuario)
+
+Por defecto se asignan las combinaciones NVDA + Alt + 1 al 0.
+
+1 es escritorio 1 y 0 escritorio 10.
+
+Esta función solo permite moverse entre los 10 primeros escritorios.
+
+En caso de tener más escritorios tendremos que movernos manualmente a partir del 10.
+
 * Anuncio de carpeta vacía en explorador de windows (función sin necesidad de tecla asignada)
 
 Cuando estemos en el explorador de Windows y entremos en una carpeta vacía nos anunciara con un mensaje que dicha carpeta esta vacía.

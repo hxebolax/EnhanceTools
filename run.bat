@@ -4,4 +4,4 @@ echo Creando complemento...
 scons --clean
 scons
 scons pot
-EnhanceTools-1.0.nvda-addon
+EnhanceTools-1.1.nvda-addon
