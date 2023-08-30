@@ -7,22 +7,24 @@
 # Me quede solo con el archivo .py y no recuerdo de donde lo saque ni el nombre del complemento. En cuanto tenga más información lo pondré aquí dando los créditos adecuados.
 
 import globalPluginHandler
-import addonHandler
 import UIAHandler
 import IAccessibleHandler
 import globalVars
 import ui
 import appModuleHandler
-import ctypes
-import time
 from NVDAObjects.UIA import UIA
+from addonHandler import initTranslation, getAvailableAddons
 from scriptHandler import script
+from _addonStore.dataManager import _DataManager
+import re
+import time
+import ctypes
 from comtypes import CoInitialize
 from comtypes.client import GetModule, CreateObject
-from ctypes import POINTER, c_void_p
 from comtypes.automation import IDispatch
+from ctypes import POINTER, c_void_p
 
-addonHandler.initTranslation()
+initTranslation()
 
 # Define el CLSID para CUIAutomation
 CLSID_CUIAutomation = "{FF48DBA4-60EF-4201-AA87-54103EEF594E}"
@@ -209,6 +211,56 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if isinstance(obj, UIA) and hasattr(obj.UIAElement, "_isEmptyList"):
 			clsList.insert(0, EmptyList)
 
+	def versiontuple(self, v):
+		"""Convierte una cadena de versión en una tupla de enteros.
+		
+		Args:
+			v (str): Cadena de versión en formato 'x.y.z'.
+		
+		Returns:
+			tuple: Tupla de enteros representando la versión.
+		"""
+		return tuple(map(int, (v.split("."))))
+
+	def getInstalledAddons(self):
+		"""Obtiene la lista de complementos instalados con sus versiones.
+		
+		Returns:
+			dict: Diccionario con el nombre del complemento como clave y la versión como valor.
+		"""
+		return {addon.manifest['name']: addon.version for addon in getAvailableAddons()}
+
+	def getAvailableUpdates(self, installed_addons):
+		"""Obtiene las actualizaciones disponibles comparando con la tienda oficial.
+		
+		Args:
+			installed_addons (dict): Diccionario de complementos instalados con sus versiones.
+		
+		Returns:
+			dict: Diccionario con complementos que tienen actualizaciones y sus nuevas versiones.
+		"""
+		data_manager = _DataManager()
+		addons_data = data_manager._compatibleAddonCache.cachedAddonData
+		# Extrayendo complementos de addons_data
+		addon_pattern = r'addonId=[\'"]([^\'"]+)[\'"].*?addonVersionName=[\'"]([^\'"]+)[\'"].*?channel=<Channel.([^>]+)>'
+		matches = re.findall(addon_pattern, str(addons_data))
+		all_addons = {(name, channel): version for name, version, channel in matches}
+
+		updates = {}
+		for addon, version in installed_addons.items():
+			stable_version = all_addons.get((addon, "STABLE: 'stable'"))
+			if stable_version:
+				if self.versiontuple(stable_version) > self.versiontuple(version):
+					updates[addon] = stable_version
+				continue
+			# Si no hay versión STABLE, considerar otras versiones
+			other_versions = {k: v for k, v in all_addons.items() if k[0] == addon}
+			if other_versions:
+				latest_version = max(other_versions.values(), key=self.versiontuple)
+				if self.versiontuple(latest_version) > self.versiontuple(version):
+					updates[addon] = latest_version
+		return updates
+
 	@script(gesture=None, description= _("Anuncia el escritorio virtual actual"), category= "EnhanceTools")
 	def script_anuncia_escritorio(self, gesture):
 		ui.message(obtener_nombre_escritorio())
@@ -225,6 +277,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if desktopNumber == 0:
 			desktopNumber = 10
 		goToVirtualDesktop(desktopNumber)
+
+	@script(gesture=None, description=_("Informa si hay actualizaciones en la tienda oficial"), category="EnhanceTools")
+	def script_checkUpdates(self, gesture):
+		"""Script para comprobar actualizaciones y mostrar un mensaje con los resultados.
+		
+		Args:
+			gesture: Gestura que activó el script.
+		"""
+		installed_addons = self.getInstalledAddons()
+		updates = self.getAvailableUpdates(installed_addons)
+		if updates:
+			message = _("Actualizaciones disponibles: ") + ", ".join([f"{name} (v{version})" for name, version in updates.items()])
+		else:
+			message = _("No existen actualizaciones.")
+		ui.message(message)
 
 	def terminate(self):
 		"""Termina el plugin global y restaura la configuración."""

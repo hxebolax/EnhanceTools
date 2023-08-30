@@ -29,3 +29,9 @@ En caso de tener más escritorios tendremos que movernos manualmente a partir de
 Cuando estemos en el explorador de Windows y entremos en una carpeta vacía nos anunciara con un mensaje que dicha carpeta esta vacía.
 
 Hasta ahora simplemente NVDA no decía nada.
+
+* Informa si hay actualizaciones en la tienda oficial (Necesita que se asigne tecla)
+
+Una vez pulsemos la combinación que hayamos asignado nos informara si hay actualizaciones oficiales.
+
+Se nombrarán los complementos que tienen actualización y su versión.
